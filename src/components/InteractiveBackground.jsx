@@ -1,99 +1,473 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
-export default function InteractiveBackground({ theme = 'constellation' }) {
+export default function InteractiveBackground() {
   const canvasRef = useRef(null);
-  const mouseRef = useRef({ x: -1000, y: -1000, isDown: false, radius: 160 });
+
+  const mouseRef = useRef({
+    x: -1000,
+    y: -1000,
+    isDown: false,
+    radius: 180,
+  });
+
   const ripplesRef = useRef([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
-    let animationFrameId;
+
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
+
+    let animationFrameId;
+
+    const mouse = mouseRef.current;
+
+    const nodes = [];
+    const numbers = [];
+    const bars = [];
+
+    const nodeCount = Math.min(
+      42,
+      Math.max(24, Math.floor((width * height) / 32000))
+    );
+
+    function createNodes() {
+      nodes.length = 0;
+
+      for (let i = 0; i < nodeCount; i++) {
+        nodes.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          radius: Math.random() * 2 + 2,
+          pulse: Math.random() * Math.PI * 2,
+        });
+      }
+    }
+
+    function createNumbers() {
+      numbers.length = 0;
+
+      const values = [
+        'O(n)',
+        'O(log n)',
+        'O(n²)',
+        '01',
+        '10',
+        '101',
+        '42',
+        '64',
+        '128',
+        '256',
+        'A',
+        'B',
+        'C',
+        'DFS',
+        'BFS',
+        'SORT',
+        'SEARCH',
+      ];
+
+      for (let i = 0; i < 25; i++) {
+        numbers.push({
+          text: values[Math.floor(Math.random() * values.length)],
+          x: Math.random() * width,
+          y: Math.random() * height,
+          speed: Math.random() * 0.25 + 0.08,
+          opacity: Math.random() * 0.16 + 0.05,
+          size: Math.random() * 5 + 10,
+        });
+      }
+    }
+
+    function createBars() {
+      bars.length = 0;
+
+      for (let i = 0; i < 18; i++) {
+        bars.push({
+          height: Math.random() * 70 + 20,
+          target: Math.random() * 100 + 20,
+          speed: Math.random() * 0.8 + 0.2,
+        });
+      }
+    }
+
+    function initialize() {
+      createNodes();
+      createNumbers();
+      createBars();
+    }
+
+    initialize();
 
     const handleResize = () => {
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
-      initParticles();
+      initialize();
     };
 
-    window.addEventListener('resize', handleResize);
-
-    // Track mouse on entire window so buttons still trigger it
     const handleMouseMove = (e) => {
-      mouseRef.current.x = e.clientX;
-      mouseRef.current.y = e.clientY;
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
     };
 
     const handleMouseDown = (e) => {
-      mouseRef.current.isDown = true;
-      // Add ripple shockwave
+      mouse.isDown = true;
+
       ripplesRef.current.push({
         x: e.clientX,
         y: e.clientY,
         radius: 0,
-        maxRadius: 180,
-        opacity: 0.6,
+        maxRadius: 220,
+        opacity: 0.7,
       });
-      if (ripplesRef.current.length > 5) {
+
+      if (ripplesRef.current.length > 6) {
         ripplesRef.current.shift();
       }
     };
 
     const handleMouseUp = () => {
-      mouseRef.current.isDown = false;
+      mouse.isDown = false;
     };
 
     const handleMouseLeave = () => {
-      mouseRef.current.x = -1000;
-      mouseRef.current.y = -1000;
+      mouse.x = -1000;
+      mouse.y = -1000;
     };
 
+    window.addEventListener('resize', handleResize);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('mouseleave', handleMouseLeave);
 
-    // Particle Generation
-    let particles = [];
-    const particleCount = Math.min(100, Math.floor((width * height) / 14000));
+    function drawGrid() {
+      const gridSize = 80;
 
-    function initParticles() {
-      particles = [];
-      const colors = [
-        'rgba(56, 189, 248, ',  // Sky/Cyan
-        'rgba(129, 140, 248, ', // Indigo
-        'rgba(168, 85, 247, ',  // Purple
-        'rgba(52, 211, 153, ',  // Emerald
-      ];
+      ctx.save();
 
-      for (let i = 0; i < particleCount; i++) {
-        particles.push({
-          x: Math.random() * width,
-          y: Math.random() * height,
-          vx: (Math.random() - 0.5) * 0.7,
-          vy: (Math.random() - 0.5) * 0.7,
-          baseRadius: Math.random() * 2 + 1.2,
-          radius: Math.random() * 2 + 1.2,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          baseAlpha: Math.random() * 0.4 + 0.3,
-        });
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.035)';
+      ctx.lineWidth = 1;
+
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawTree() {
+      const centerX = width * 0.82;
+      const startY = height * 0.18;
+
+      const treeNodes = [];
+
+      for (let level = 0; level < 4; level++) {
+        const count = Math.pow(2, level);
+        const spacing = Math.min(100, width / (count + 2));
+
+        for (let i = 0; i < count; i++) {
+          const x =
+            centerX +
+            (i - (count - 1) / 2) * spacing;
+
+          const y = startY + level * 70;
+
+          treeNodes.push({
+            x,
+            y,
+            level,
+            index: i,
+          });
+        }
+      }
+
+      ctx.save();
+
+      for (let i = 1; i < treeNodes.length; i++) {
+        const child = treeNodes[i];
+
+        const parentIndex = Math.floor((i - 1) / 2);
+        const parent = treeNodes[parentIndex];
+
+        ctx.beginPath();
+        ctx.moveTo(parent.x, parent.y);
+        ctx.lineTo(child.x, child.y);
+
+        ctx.strokeStyle = 'rgba(129, 140, 248, 0.18)';
+        ctx.lineWidth = 1;
+
+        ctx.stroke();
+      }
+
+      treeNodes.forEach((node, index) => {
+        const pulse =
+          Math.sin(Date.now() * 0.002 + index) * 0.5 + 0.5;
+
+        ctx.beginPath();
+        ctx.arc(
+          node.x,
+          node.y,
+          3 + pulse * 1.5,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.fillStyle = `rgba(129, 140, 248, ${
+          0.35 + pulse * 0.25
+        })`;
+
+        ctx.fill();
+      });
+
+      ctx.restore();
+    }
+
+    function drawSortingBars() {
+      const baseX = 35;
+      const baseY = height - 45;
+      const barWidth = 7;
+      const gap = 6;
+
+      ctx.save();
+
+      bars.forEach((bar, index) => {
+        if (bar.height >= bar.target) {
+          bar.target = Math.random() * 90 + 20;
+        }
+
+        bar.height +=
+          (bar.target - bar.height) * 0.025;
+
+        const x = baseX + index * (barWidth + gap);
+
+        const gradient = ctx.createLinearGradient(
+          0,
+          baseY - bar.height,
+          0,
+          baseY
+        );
+
+        gradient.addColorStop(
+          0,
+          'rgba(56, 189, 248, 0.55)'
+        );
+
+        gradient.addColorStop(
+          1,
+          'rgba(129, 140, 248, 0.08)'
+        );
+
+        ctx.fillStyle = gradient;
+
+        ctx.fillRect(
+          x,
+          baseY - bar.height,
+          barWidth,
+          bar.height
+        );
+      });
+
+      ctx.restore();
+    }
+
+    function drawNumbers() {
+      numbers.forEach((item) => {
+        item.y -= item.speed;
+
+        if (item.y < -30) {
+          item.y = height + 20;
+          item.x = Math.random() * width;
+        }
+
+        ctx.font = `${item.size}px monospace`;
+
+        ctx.fillStyle = `rgba(56, 189, 248, ${item.opacity})`;
+
+        ctx.fillText(
+          item.text,
+          item.x,
+          item.y
+        );
+      });
+    }
+
+    function drawRipples() {
+      for (
+        let i = ripplesRef.current.length - 1;
+        i >= 0;
+        i--
+      ) {
+        const ripple = ripplesRef.current[i];
+
+        ripple.radius += 5;
+        ripple.opacity -= 0.018;
+
+        if (
+          ripple.opacity <= 0 ||
+          ripple.radius >= ripple.maxRadius
+        ) {
+          ripplesRef.current.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+
+        ctx.beginPath();
+
+        ctx.arc(
+          ripple.x,
+          ripple.y,
+          ripple.radius,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.strokeStyle = `rgba(56, 189, 248, ${ripple.opacity})`;
+
+        ctx.lineWidth = 2;
+
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 14;
+
+        ctx.stroke();
+
+        ctx.restore();
       }
     }
 
-    initParticles();
+    function drawMouseConnections() {
+      if (mouse.x < 0 || mouse.y < 0) return;
 
-    // Render loop
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
+      nodes.forEach((node) => {
+        const dx = mouse.x - node.x;
+        const dy = mouse.y - node.y;
 
-      const mouse = mouseRef.current;
+        const distance = Math.sqrt(
+          dx * dx + dy * dy
+        );
 
-      // 1. Draw Subtle Mouse Follow Radial Glow Spotlight
-      if (mouse.x > 0 && mouse.y > 0) {
-        const mouseGlow = ctx.createRadialGradient(
+        if (distance < mouse.radius) {
+          const strength =
+            1 - distance / mouse.radius;
+
+          ctx.beginPath();
+
+          ctx.moveTo(node.x, node.y);
+
+          ctx.lineTo(mouse.x, mouse.y);
+
+          ctx.strokeStyle = `rgba(56, 189, 248, ${
+            strength * 0.5
+          })`;
+
+          ctx.lineWidth = 1.2;
+
+          ctx.stroke();
+
+          node.x -=
+            (dx / distance || 0) *
+            strength *
+            0.25;
+
+          node.y -=
+            (dy / distance || 0) *
+            strength *
+            0.25;
+        }
+      });
+    }
+
+    function drawGraph() {
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+
+        node.x += node.vx;
+        node.y += node.vy;
+
+        if (node.x < 0 || node.x > width) {
+          node.vx *= -1;
+        }
+
+        if (node.y < 0 || node.y > height) {
+          node.vy *= -1;
+        }
+
+        node.pulse += 0.02;
+
+        for (let j = i + 1; j < nodes.length; j++) {
+          const other = nodes[j];
+
+          const distance = Math.hypot(
+            node.x - other.x,
+            node.y - other.y
+          );
+
+          if (distance < 145) {
+            const alpha =
+              (1 - distance / 145) * 0.24;
+
+            ctx.beginPath();
+
+            ctx.moveTo(node.x, node.y);
+
+            ctx.lineTo(other.x, other.y);
+
+            ctx.strokeStyle = `rgba(99, 102, 241, ${alpha})`;
+
+            ctx.lineWidth = 0.8;
+
+            ctx.stroke();
+          }
+        }
+      }
+
+      nodes.forEach((node) => {
+        const pulse =
+          Math.sin(node.pulse) * 0.8;
+
+        ctx.beginPath();
+
+        ctx.arc(
+          node.x,
+          node.y,
+          node.radius + pulse,
+          0,
+          Math.PI * 2
+        );
+
+        ctx.fillStyle =
+          'rgba(56, 189, 248, 0.75)';
+
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 8;
+
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+      });
+    }
+
+    function drawMouseGlow() {
+      if (mouse.x < 0 || mouse.y < 0) return;
+
+      const glow =
+        ctx.createRadialGradient(
           mouse.x,
           mouse.y,
           0,
@@ -101,125 +475,94 @@ export default function InteractiveBackground({ theme = 'constellation' }) {
           mouse.y,
           320
         );
-        mouseGlow.addColorStop(0, 'rgba(56, 189, 248, 0.08)');
-        mouseGlow.addColorStop(0.5, 'rgba(99, 102, 241, 0.03)');
-        mouseGlow.addColorStop(1, 'rgba(15, 23, 42, 0)');
-        ctx.fillStyle = mouseGlow;
-        ctx.fillRect(0, 0, width, height);
-      }
 
-      // 2. Process Shockwave Ripples from clicks
-      for (let i = ripplesRef.current.length - 1; i >= 0; i--) {
-        const rip = ripplesRef.current[i];
-        rip.radius += 4;
-        rip.opacity -= 0.015;
+      glow.addColorStop(
+        0,
+        'rgba(56, 189, 248, 0.10)'
+      );
 
-        if (rip.opacity <= 0 || rip.radius >= rip.maxRadius) {
-          ripplesRef.current.splice(i, 1);
-          continue;
-        }
+      glow.addColorStop(
+        0.45,
+        'rgba(99, 102, 241, 0.035)'
+      );
 
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(56, 189, 248, ${rip.opacity})`;
-        ctx.lineWidth = 2;
-        ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 10;
-        ctx.stroke();
-        ctx.restore();
-      }
+      glow.addColorStop(
+        1,
+        'rgba(15, 23, 42, 0)'
+      );
 
-      // 3. Update and Draw Particles
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
+      ctx.fillStyle = glow;
 
-        // Move
-        p.x += p.vx;
-        p.y += p.vy;
+      ctx.fillRect(
+        0,
+        0,
+        width,
+        height
+      );
+    }
 
-        // Bounce off edges
-        if (p.x < 0 || p.x > width) p.vx *= -1;
-        if (p.y < 0 || p.y > height) p.vy *= -1;
+    function render() {
+      ctx.clearRect(
+        0,
+        0,
+        width,
+        height
+      );
 
-        // Distance from mouse
-        const dx = mouse.x - p.x;
-        const dy = mouse.y - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+      drawGrid();
+      drawNumbers();
+      drawTree();
+      drawGraph();
+      drawMouseConnections();
+      drawSortingBars();
+      drawRipples();
+      drawMouseGlow();
 
-        // Interactive mouse interaction: pull gently or push
-        if (dist < mouse.radius) {
-          const force = (mouse.radius - dist) / mouse.radius;
-          const angle = Math.atan2(dy, dx);
-          
-          // Subtle repulsion on hover, suction on click
-          if (mouse.isDown) {
-            p.x += Math.cos(angle) * force * 5;
-            p.y += Math.sin(angle) * force * 5;
-          } else {
-            p.x -= Math.cos(angle) * force * 2.2;
-            p.y -= Math.sin(angle) * force * 2.2;
-          }
-
-          // Connect particle to mouse with glowing line
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(mouse.x, mouse.y);
-          const mouseLineAlpha = (1 - dist / mouse.radius) * 0.45;
-          ctx.strokeStyle = `rgba(56, 189, 248, ${mouseLineAlpha})`;
-          ctx.lineWidth = 1.2;
-          ctx.stroke();
-
-          p.radius = p.baseRadius * 1.6;
-        } else {
-          p.radius = p.baseRadius;
-        }
-
-        // Draw particle
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `${p.color}${p.baseAlpha})`;
-        ctx.fill();
-
-        // Connect nearby particles to form constellation graph
-        for (let j = i + 1; j < particles.length; j++) {
-          const p2 = particles[j];
-          const distBetween = Math.hypot(p.x - p2.x, p.y - p2.y);
-          const maxLinkDist = 125;
-
-          if (distBetween < maxLinkDist) {
-            const lineAlpha = (1 - distBetween / maxLinkDist) * 0.18;
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = `rgba(148, 163, 184, ${lineAlpha})`;
-            ctx.lineWidth = 0.8;
-            ctx.stroke();
-          }
-        }
-      }
-
-      animationFrameId = requestAnimationFrame(render);
-    };
+      animationFrameId =
+        requestAnimationFrame(render);
+    }
 
     render();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('mouseleave', handleMouseLeave);
+      cancelAnimationFrame(
+        animationFrameId
+      );
+
+      window.removeEventListener(
+        'resize',
+        handleResize
+      );
+
+      window.removeEventListener(
+        'mousemove',
+        handleMouseMove
+      );
+
+      window.removeEventListener(
+        'mousedown',
+        handleMouseDown
+      );
+
+      window.removeEventListener(
+        'mouseup',
+        handleMouseUp
+      );
+
+      document.removeEventListener(
+        'mouseleave',
+        handleMouseLeave
+      );
     };
-  }, [theme]);
+  }, []);
 
   return (
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0"
       style={{
-        background: 'radial-gradient(ellipse at 50% 0%, #0f172a 0%, #070b14 60%, #030712 100%)',
+        background:
+          'radial-gradient(ellipse at 50% 0%, #0f172a 0%, #070b14 55%, #020617 100%)',
       }}
     />
   );
