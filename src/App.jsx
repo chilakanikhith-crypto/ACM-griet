@@ -9,6 +9,7 @@ import PseudocodeViewer from './components/PseudocodeViewer';
 import MetricsPanel from './components/MetricsPanel';
 import ComplexityCard from './components/ComplexityCard';
 import InfoModal from './components/InfoModal';
+import InteractiveBackground from './components/InteractiveBackground';
 
 import { generateBubbleSortSteps } from './algorithms/bubbleSort';
 import { generateMergeSortSteps } from './algorithms/mergeSort';
@@ -24,6 +25,7 @@ export default function App() {
   // Navigation & Modal State
   const [activeAlgo, setActiveAlgo] = useState('bubble_sort');
   const [isAudioOn, setIsAudioOn] = useState(true);
+  const [isInteractiveBg, setIsInteractiveBg] = useState(true);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
 
   // Playback States
@@ -297,14 +299,19 @@ export default function App() {
   }, [graphPresetKey]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-slate-950 relative overflow-x-hidden">
       
+      {/* Interactive Background Canvas */}
+      {isInteractiveBg && <InteractiveBackground />}
+
       {/* Top Navbar */}
       <Header
         activeAlgo={activeAlgo}
         onSelectAlgo={handleSelectAlgo}
         isAudioOn={isAudioOn}
         onToggleAudio={handleToggleAudio}
+        isInteractiveBg={isInteractiveBg}
+        onToggleInteractiveBg={() => setIsInteractiveBg((prev) => !prev)}
         onOpenInfoModal={() => setIsInfoOpen(true)}
       />
 
@@ -346,7 +353,7 @@ export default function App() {
       />
 
       {/* Main Application Visualizer Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 flex flex-col gap-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 flex flex-col gap-6 relative z-10">
         
         {/* Primary Interactive Visualizer Canvas */}
         <section aria-label="Visualizer Canvas" className="w-full">

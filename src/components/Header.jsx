@@ -9,7 +9,7 @@ import {
   VolumeX, 
   Sparkles,
   HelpCircle,
-  ExternalLink
+  Atom
 } from 'lucide-react';
 
 const ALGO_TABS = [
@@ -25,6 +25,8 @@ export default function Header({
   onSelectAlgo, 
   isAudioOn, 
   onToggleAudio, 
+  isInteractiveBg,
+  onToggleInteractiveBg,
   onOpenInfoModal 
 }) {
   return (
@@ -52,8 +54,19 @@ export default function Header({
             </div>
           </div>
 
-          {/* Mobile Audio / Info toggles */}
+          {/* Mobile Audio / Bg / Info toggles */}
           <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={onToggleInteractiveBg}
+              className={`p-2 rounded-lg border transition-all ${
+                isInteractiveBg
+                  ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                  : 'bg-slate-900 border-slate-800 text-slate-500'
+              }`}
+              title="Toggle interactive background"
+            >
+              <Atom className="w-4 h-4" />
+            </button>
             <button
               onClick={onToggleAudio}
               className={`p-2 rounded-lg border transition-all ${
@@ -102,8 +115,21 @@ export default function Header({
           })}
         </div>
 
-        {/* Desktop Audio Toggle & Info */}
+        {/* Desktop Controls */}
         <div className="hidden md:flex items-center gap-2.5">
+          <button
+            onClick={onToggleInteractiveBg}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+              isInteractiveBg
+                ? 'bg-purple-500/15 border-purple-500/35 text-purple-300 hover:bg-purple-500/25 shadow-sm shadow-purple-500/10'
+                : 'bg-slate-900 border-slate-800 text-slate-500 hover:text-slate-300 hover:border-slate-700'
+            }`}
+            title="Interactive particle constellation background (follows cursor, ripples on click)"
+          >
+            <Atom className={`w-3.5 h-3.5 ${isInteractiveBg ? 'text-purple-400 animate-spin-slow' : 'text-slate-500'}`} />
+            <span>{isInteractiveBg ? 'Bg Active' : 'Bg Off'}</span>
+          </button>
+
           <button
             onClick={onToggleAudio}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
