@@ -77,7 +77,7 @@ export default function App() {
     useState(0);
 
   const [speed, setSpeed] =
-    useState(1);
+    useState(0.25);
 
   const [arraySize, setArraySize] =
     useState(16);
