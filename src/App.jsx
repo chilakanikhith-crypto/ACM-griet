@@ -3,57 +3,150 @@ import React, {
   useEffect,
   useRef,
   useMemo
-} from 'react';
+} from "react";
 
-import Header from './components/Header';
-import ControlBar from './components/ControlBar';
-import SortingVisualizer from './components/SortingVisualizer';
-import BinarySearchVisualizer from './components/BinarySearchVisualizer';
-import GraphVisualizer from './components/GraphVisualizer';
-import GridVisualizer from './components/GridVisualizer';
-import PseudocodeViewer from './components/PseudocodeViewer';
-import MetricsPanel from './components/MetricsPanel';
-import ComplexityCard from './components/ComplexityCard';
-import InfoModal from './components/InfoModal';
-import InteractiveBackground from './components/InteractiveBackground';
-import ChallengePanel from './components/ChallengePanel';
-import ProgressPanel from './components/ProgressPanel';
+import Header from "./components/Header";
+import ControlBar from "./components/ControlBar";
+import SortingVisualizer from "./components/SortingVisualizer";
+import BinarySearchVisualizer from "./components/BinarySearchVisualizer";
+import GraphVisualizer from "./components/GraphVisualizer";
+import GridVisualizer from "./components/GridVisualizer";
+import PseudocodeViewer from "./components/PseudocodeViewer";
+import MetricsPanel from "./components/MetricsPanel";
+import ComplexityCard from "./components/ComplexityCard";
+import InfoModal from "./components/InfoModal";
+import InteractiveBackground from "./components/InteractiveBackground";
+import ChallengePanel from "./components/ChallengePanel";
+import ProgressPanel from "./components/ProgressPanel";
 
-import { generateBubbleSortSteps } from './algorithms/bubbleSort';
-import { generateMergeSortSteps } from './algorithms/mergeSort';
-import { generateBinarySearchSteps } from './algorithms/binarySearch';
+import { generateBubbleSortSteps } from "./algorithms/bubbleSort";
+import { generateMergeSortSteps } from "./algorithms/mergeSort";
+import { generateBinarySearchSteps } from "./algorithms/binarySearch";
 
 import {
   generateGraphBFSSteps,
   generateGridBFSSteps
-} from './algorithms/bfs';
+} from "./algorithms/bfs";
 
 import {
   generateGraphDFSSteps,
   generateGridDFSSteps
-} from './algorithms/dfs';
+} from "./algorithms/dfs";
 
-import { GRAPH_PRESETS } from './algorithms/graphData';
-import { ALGORITHMS } from './algorithms/algorithmMeta';
+import { GRAPH_PRESETS } from "./algorithms/graphData";
+import { ALGORITHMS } from "./algorithms/algorithmMeta";
 
-import {
-  createInitialGrid,
-  generateRandomMaze
-} from './utils/gridUtils';
-
-import { sound } from './utils/sound';
+import { sound } from "./utils/sound";
 
 import {
   createChallenge
-} from './utils/challengeUtils';
+} from "./utils/challengeUtils";
 
 import {
   loadProgress,
   saveProgress,
   addChallengeResult,
   resetProgress
-} from './utils/progressUtils';
+} from "./utils/progressUtils";
 
+
+/* =========================================================
+   GRID FUNCTIONS
+========================================================= */
+
+function createInitialGrid(
+  rows = 11,
+  cols = 21
+) {
+  const grid = [];
+
+  for (let r = 0; r < rows; r++) {
+    const row = [];
+
+    for (let c = 0; c < cols; c++) {
+      row.push({
+        r,
+        c,
+        isWall: false
+      });
+    }
+
+    grid.push(row);
+  }
+
+  return grid;
+}
+
+
+function generateRandomMaze(
+  rows = 11,
+  cols = 21,
+  start = { r: 5, c: 3 },
+  end = { r: 5, c: 17 }
+) {
+  const grid = createInitialGrid(
+    rows,
+    cols
+  );
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+
+      const isStart =
+        r === start.r &&
+        c === start.c;
+
+      const isEnd =
+        r === end.r &&
+        c === end.c;
+
+      if (!isStart && !isEnd) {
+        grid[r][c].isWall =
+          Math.random() < 0.20;
+      }
+    }
+  }
+
+  /*
+   * Always create a guaranteed path
+   * from start to end.
+   */
+
+  let r = start.r;
+  let c = start.c;
+
+  while (c !== end.c) {
+
+    grid[r][c].isWall = false;
+
+    if (c < end.c) {
+      c++;
+    } else {
+      c--;
+    }
+  }
+
+  while (r !== end.r) {
+
+    grid[r][c].isWall = false;
+
+    if (r < end.r) {
+      r++;
+    } else {
+      r--;
+    }
+  }
+
+  grid[start.r][start.c].isWall = false;
+  grid[end.r][end.c].isWall = false;
+
+  return grid;
+}
+
+
+/* =========================================================
+   APP
+========================================================= */
 
 export default function App() {
 
@@ -62,7 +155,7 @@ export default function App() {
   ========================================================= */
 
   const [activeAlgo, setActiveAlgo] =
-    useState('bubble_sort');
+    useState("bubble_sort");
 
   const [isAudioOn, setIsAudioOn] =
     useState(true);
@@ -116,13 +209,19 @@ export default function App() {
   ========================================================= */
 
   const [viewMode, setViewMode] =
-    useState('graph');
+    useState("graph");
 
   const [graphPresetKey, setGraphPresetKey] =
-    useState('tree');
+    useState("tree");
 
   const [startNode, setStartNode] =
-    useState('A');
+    useState("A");
+
+
+  /*
+   * IMPORTANT:
+   * These are constant coordinates.
+   */
 
   const gridStart = {
     r: 5,
@@ -134,13 +233,21 @@ export default function App() {
     c: 17
   };
 
-  const [grid, setGrid] = useState(() =>
-    createInitialGrid()
-  );
+
+  /*
+   * IMPORTANT FIX:
+   * Grid is guaranteed to start as
+   * 11 rows x 21 columns.
+   */
+
+  const [grid, setGrid] =
+    useState(() =>
+      createInitialGrid(11, 21)
+    );
 
 
   /* =========================================================
-     CHALLENGE MODE STATE
+     CHALLENGE STATE
   ========================================================= */
 
   const [challengeScore, setChallengeScore] =
@@ -154,12 +261,11 @@ export default function App() {
 
 
   /* =========================================================
-     XP / PROGRESS STATE
+     PROGRESS STATE
   ========================================================= */
 
-  const [progress, setProgress] = useState(
-    () => loadProgress()
-  );
+  const [progress, setProgress] =
+    useState(() => loadProgress());
 
 
   /* =========================================================
@@ -170,25 +276,31 @@ export default function App() {
 
     switch (activeAlgo) {
 
-      case 'bubble_sort':
+      case "bubble_sort":
+
         return generateBubbleSortSteps(
           sortingArray
         );
 
-      case 'merge_sort':
+
+      case "merge_sort":
+
         return generateMergeSortSteps(
           sortingArray
         );
 
-      case 'binary_search':
+
+      case "binary_search":
+
         return generateBinarySearchSteps(
           searchArray,
           targetValue
         );
 
-      case 'bfs':
 
-        if (viewMode === 'graph') {
+      case "bfs":
+
+        if (viewMode === "graph") {
 
           return generateGraphBFSSteps(
             GRAPH_PRESETS[graphPresetKey],
@@ -203,9 +315,10 @@ export default function App() {
           gridEnd
         );
 
-      case 'dfs':
 
-        if (viewMode === 'graph') {
+      case "dfs":
+
+        if (viewMode === "graph") {
 
           return generateGraphDFSSteps(
             GRAPH_PRESETS[graphPresetKey],
@@ -220,8 +333,11 @@ export default function App() {
           gridEnd
         );
 
+
       default:
+
         return [];
+
     }
 
   }, [
@@ -240,12 +356,14 @@ export default function App() {
      STEP INFORMATION
   ========================================================= */
 
-  const totalSteps = steps.length;
+  const totalSteps =
+    steps.length;
 
   const currentStep =
     steps[currentStepIndex] ||
     steps[0] ||
     {};
+
 
   const isComplete =
     totalSteps > 0 &&
@@ -254,7 +372,7 @@ export default function App() {
 
 
   /* =========================================================
-     LIVE METRICS
+     METRICS
   ========================================================= */
 
   const metrics = useMemo(() => {
@@ -270,57 +388,63 @@ export default function App() {
         currentStepIndex + 1
       );
 
+
     for (const step of stepsUntilNow) {
 
       if (
         typeof step.comparisons ===
-        'number'
+        "number"
       ) {
         comparisons =
           step.comparisons;
       }
 
+
       if (
         typeof step.swaps ===
-        'number'
+        "number"
       ) {
         swaps =
           step.swaps;
       }
 
+
       if (
         typeof step.comparisons !==
-          'number' &&
+          "number" &&
         (
           step.comparing?.length > 0 ||
-          step.type === 'compare' ||
-          step.action === 'compare'
+          step.type === "compare" ||
+          step.action === "compare"
         )
       ) {
         comparisons++;
       }
 
+
       if (
         typeof step.swaps !==
-          'number' &&
+          "number" &&
         (
           step.swapping?.length > 0 ||
-          step.type === 'swap' ||
-          step.action === 'swap'
+          step.type === "swap" ||
+          step.action === "swap"
         )
       ) {
         swaps++;
       }
 
+
       if (
-        activeAlgo === 'merge_sort' &&
+        activeAlgo === "merge_sort" &&
         typeof step.swaps !==
-          'number' &&
+          "number" &&
         step.writing !== undefined &&
         step.writing !== null
       ) {
         swaps++;
       }
+
 
       if (
         Array.isArray(step.visited)
@@ -328,6 +452,7 @@ export default function App() {
         visitedCount =
           step.visited.length;
       }
+
 
       if (
         Array.isArray(
@@ -338,12 +463,14 @@ export default function App() {
           step.visitedCells.length;
       }
 
+
       if (
         Array.isArray(step.queue)
       ) {
         queueOrStackDepth =
           step.queue.length;
       }
+
 
       if (
         Array.isArray(step.stack)
@@ -352,38 +479,44 @@ export default function App() {
           step.stack.length;
       }
 
+
       if (
         typeof step.queueSize ===
-        'number'
+        "number"
       ) {
         queueOrStackDepth =
           step.queueSize;
       }
 
+
       if (
         typeof step.stackSize ===
-        'number'
+        "number"
       ) {
         queueOrStackDepth =
           step.stackSize;
       }
+
     }
+
 
     if (
       typeof currentStep.comparisons ===
-      'number'
+      "number"
     ) {
       comparisons =
         currentStep.comparisons;
     }
 
+
     if (
       typeof currentStep.swaps ===
-      'number'
+      "number"
     ) {
       swaps =
         currentStep.swaps;
     }
+
 
     if (
       Array.isArray(
@@ -394,6 +527,7 @@ export default function App() {
         currentStep.visited.length;
     }
 
+
     if (
       Array.isArray(
         currentStep.visitedCells
@@ -402,6 +536,7 @@ export default function App() {
       visitedCount =
         currentStep.visitedCells.length;
     }
+
 
     if (
       Array.isArray(
@@ -412,6 +547,7 @@ export default function App() {
         currentStep.queue.length;
     }
 
+
     if (
       Array.isArray(
         currentStep.stack
@@ -420,6 +556,7 @@ export default function App() {
       queueOrStackDepth =
         currentStep.stack.length;
     }
+
 
     return {
       comparisons,
@@ -437,23 +574,24 @@ export default function App() {
 
 
   /* =========================================================
-     CHALLENGE GENERATION
+     CHALLENGE
   ========================================================= */
 
-  const challenge = useMemo(() => {
+  const challenge =
+    useMemo(() => {
 
-    return createChallenge(
+      return createChallenge(
+        activeAlgo,
+        steps,
+        currentStepIndex
+      );
+
+    }, [
       activeAlgo,
       steps,
-      currentStepIndex
-    );
-
-  }, [
-    activeAlgo,
-    steps,
-    currentStepIndex,
-    challengeKey
-  ]);
+      currentStepIndex,
+      challengeKey
+    ]);
 
 
   /* =========================================================
@@ -468,6 +606,7 @@ export default function App() {
     ) {
       return;
     }
+
 
     if (
       currentStep.swapping &&
@@ -549,6 +688,7 @@ export default function App() {
   const timerRef =
     useRef(null);
 
+
   useEffect(() => {
 
     if (isPlaying) {
@@ -560,6 +700,7 @@ export default function App() {
             380 / speed
           )
         );
+
 
       timerRef.current =
         setInterval(() => {
@@ -580,12 +721,14 @@ export default function App() {
               }
 
               return prev + 1;
+
             }
           );
 
         }, delay);
 
     }
+
     else {
 
       if (timerRef.current) {
@@ -597,6 +740,7 @@ export default function App() {
       }
 
     }
+
 
     return () => {
 
@@ -618,7 +762,7 @@ export default function App() {
 
 
   /* =========================================================
-     PLAYBACK CONTROLS
+     PLAYBACK
   ========================================================= */
 
   const handlePlay = () => {
@@ -633,6 +777,7 @@ export default function App() {
     }
 
     setIsPlaying(true);
+
   };
 
 
@@ -659,7 +804,7 @@ export default function App() {
     ) {
 
       setCurrentStepIndex(
-        (prev) => prev + 1
+        prev => prev + 1
       );
 
     }
@@ -674,7 +819,7 @@ export default function App() {
     ) {
 
       setCurrentStepIndex(
-        (prev) => prev - 1
+        prev => prev - 1
       );
 
     }
@@ -719,7 +864,7 @@ export default function App() {
     setCurrentStepIndex(0);
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
 
   };
@@ -742,17 +887,19 @@ export default function App() {
 
 
   /* =========================================================
-     RANDOMIZE ARRAY
+     RANDOMIZE
   ========================================================= */
 
   const handleRandomizeArray = () => {
 
     setIsPlaying(false);
+
     setCurrentStepIndex(0);
+
 
     if (
       activeAlgo ===
-      'binary_search'
+      "binary_search"
     ) {
 
       const arr = [];
@@ -761,6 +908,7 @@ export default function App() {
         Math.floor(
           Math.random() * 8
         ) + 4;
+
 
       for (
         let i = 0;
@@ -777,15 +925,18 @@ export default function App() {
 
       }
 
+
       setSearchArray(arr);
+
 
       const randomTarget =
         arr[
           Math.floor(
             Math.random() *
-              arr.length
+            arr.length
           )
         ];
+
 
       setTargetValue(
         randomTarget
@@ -815,9 +966,11 @@ export default function App() {
 
     }
 
+
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
+
   };
 
 
@@ -834,8 +987,9 @@ export default function App() {
 
     const arr = [];
 
+
     if (
-      preset === 'reversed'
+      preset === "reversed"
     ) {
 
       for (
@@ -855,8 +1009,7 @@ export default function App() {
     }
 
     else if (
-      preset ===
-      'nearly_sorted'
+      preset === "nearly_sorted"
     ) {
 
       for (
@@ -872,6 +1025,7 @@ export default function App() {
         );
 
       }
+
 
       if (arr.length > 5) {
 
@@ -889,8 +1043,7 @@ export default function App() {
     }
 
     else if (
-      preset ===
-      'few_unique'
+      preset === "few_unique"
     ) {
 
       const palette = [
@@ -899,6 +1052,7 @@ export default function App() {
         60,
         85
       ];
+
 
       for (
         let i = 0;
@@ -914,19 +1068,21 @@ export default function App() {
 
       }
 
+
       arr.sort(
         () =>
-          Math.random() -
-          0.5
+          Math.random() - 0.5
       );
 
     }
 
+
     setSortingArray(arr);
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
+
   };
 
 
@@ -946,6 +1102,7 @@ export default function App() {
 
     const arr = [];
 
+
     for (
       let i = 0;
       i < newSize;
@@ -960,11 +1117,13 @@ export default function App() {
 
     }
 
+
     setSortingArray(arr);
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
+
   };
 
 
@@ -989,13 +1148,14 @@ export default function App() {
     );
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
+
   };
 
 
   /* =========================================================
-     INTERACTIVE ARRAY EDITOR
+     ARRAY EDITOR
   ========================================================= */
 
   const handleArrayValueChange = (
@@ -1006,6 +1166,7 @@ export default function App() {
     const numericValue =
       Number(value);
 
+
     if (
       Number.isNaN(
         numericValue
@@ -1014,9 +1175,11 @@ export default function App() {
       return;
     }
 
+
     const nextArray = [
       ...sortingArray
     ];
+
 
     nextArray[index] =
       Math.max(
@@ -1027,6 +1190,7 @@ export default function App() {
         )
       );
 
+
     setSortingArray(
       nextArray
     );
@@ -1036,8 +1200,9 @@ export default function App() {
     setCurrentStepIndex(0);
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
+
   };
 
 
@@ -1057,19 +1222,23 @@ export default function App() {
       presetKey
     );
 
+
     const defaultStart =
       GRAPH_PRESETS[
         presetKey
       ]?.defaultStart ||
-      'A';
+      "A";
+
 
     setStartNode(
       defaultStart
     );
 
+
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
+
   };
 
 
@@ -1090,8 +1259,9 @@ export default function App() {
     );
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
+
   };
 
 
@@ -1108,32 +1278,81 @@ export default function App() {
       return;
     }
 
+
     setGrid(
-      (prevGrid) => {
+      prevGrid => {
+
+        /*
+         * Safety check.
+         */
+
+        if (
+          !Array.isArray(
+            prevGrid
+          ) ||
+          prevGrid.length === 0
+        ) {
+
+          return createInitialGrid(
+            11,
+            21
+          );
+
+        }
+
 
         const nextGrid =
           prevGrid.map(
-            (row) =>
+            row =>
               row.map(
-                (cell) => ({
+                cell => ({
                   ...cell
                 })
               )
           );
 
-        nextGrid[r][c].isWall =
-          !nextGrid[r][c]
-            .isWall;
+
+        if (
+          nextGrid[r] &&
+          nextGrid[r][c]
+        ) {
+
+          /*
+           * Never allow start/end
+           * cells to become walls.
+           */
+
+          if (
+            !(
+              r === gridStart.r &&
+              c === gridStart.c
+            ) &&
+            !(
+              r === gridEnd.r &&
+              c === gridEnd.c
+            )
+          ) {
+
+            nextGrid[r][c].isWall =
+              !nextGrid[r][c].isWall;
+
+          }
+
+        }
+
 
         return nextGrid;
+
       }
     );
+
 
     setCurrentStepIndex(0);
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
+
   };
 
 
@@ -1148,12 +1367,16 @@ export default function App() {
     setCurrentStepIndex(0);
 
     setGrid(
-      createInitialGrid()
+      createInitialGrid(
+        11,
+        21
+      )
     );
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
+
   };
 
 
@@ -1177,8 +1400,9 @@ export default function App() {
     );
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
+
   };
 
 
@@ -1193,7 +1417,7 @@ export default function App() {
         GRAPH_PRESETS[
           graphPresetKey
         ]?.nodes.map(
-          (node) => node.id
+          node => node.id
         ) || []
       );
 
@@ -1217,15 +1441,6 @@ export default function App() {
         challenge?.points ||
         10;
 
-      /*
-       * Streak bonus:
-       *
-       * 1st correct = +0 bonus
-       * 2nd correct = +2 bonus
-       * 3rd correct = +4 bonus
-       * 4th correct = +6 bonus
-       * ...
-       */
 
       const streakBonus =
         Math.max(
@@ -1233,24 +1448,29 @@ export default function App() {
           challengeStreak * 2
         );
 
+
       const earnedXP =
         basePoints +
         streakBonus;
 
+
       const newStreak =
         challengeStreak + 1;
 
+
       setChallengeScore(
-        (prev) =>
+        prev =>
           prev + earnedXP
       );
+
 
       setChallengeStreak(
         newStreak
       );
 
+
       setProgress(
-        (prev) => {
+        prev => {
 
           const updated =
             addChallengeResult(
@@ -1260,11 +1480,14 @@ export default function App() {
               newStreak
             );
 
+
           saveProgress(
             updated
           );
 
+
           return updated;
+
         }
       );
 
@@ -1274,8 +1497,9 @@ export default function App() {
 
       setChallengeStreak(0);
 
+
       setProgress(
-        (prev) => {
+        prev => {
 
           const updated =
             addChallengeResult(
@@ -1285,11 +1509,14 @@ export default function App() {
               0
             );
 
+
           saveProgress(
             updated
           );
 
+
           return updated;
+
         }
       );
 
@@ -1305,10 +1532,11 @@ export default function App() {
   const handleNextChallenge = () => {
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
 
     setIsPlaying(false);
+
 
     if (
       currentStepIndex <
@@ -1316,7 +1544,7 @@ export default function App() {
     ) {
 
       setCurrentStepIndex(
-        (prev) => prev + 1
+        prev => prev + 1
       );
 
     }
@@ -1325,7 +1553,7 @@ export default function App() {
 
 
   /* =========================================================
-     RESET CHALLENGE SESSION
+     RESET CHALLENGE
   ========================================================= */
 
   const handleResetChallenge = () => {
@@ -1335,7 +1563,7 @@ export default function App() {
     setChallengeStreak(0);
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
 
     setIsPlaying(false);
@@ -1346,13 +1574,14 @@ export default function App() {
 
 
   /* =========================================================
-     RESET ALL XP / PROGRESS
+     RESET PROGRESS
   ========================================================= */
 
   const handleResetProgress = () => {
 
     const freshProgress =
       resetProgress();
+
 
     setProgress(
       freshProgress
@@ -1363,7 +1592,7 @@ export default function App() {
     setChallengeStreak(0);
 
     setChallengeKey(
-      (prev) => prev + 1
+      prev => prev + 1
     );
 
   };
@@ -1377,36 +1606,18 @@ export default function App() {
 
     <div className="min-h-screen bg-slate-950/90 text-slate-100 flex flex-col selection:bg-cyan-500 selection:text-slate-950 relative overflow-x-hidden">
 
-      {/* =====================================================
-          INTERACTIVE BACKGROUND
-      ===================================================== */}
-
       <InteractiveBackground />
 
 
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+      {/* HEADER */}
 
       <div className="relative z-20">
 
         <Header
-          activeAlgo={
-            activeAlgo
-          }
-
-          onSelectAlgo={
-            handleSelectAlgo
-          }
-
-          isAudioOn={
-            isAudioOn
-          }
-
-          onToggleAudio={
-            handleToggleAudio
-          }
-
+          activeAlgo={activeAlgo}
+          onSelectAlgo={handleSelectAlgo}
+          isAudioOn={isAudioOn}
+          onToggleAudio={handleToggleAudio}
           onOpenInfoModal={() =>
             setIsInfoOpen(true)
           }
@@ -1415,102 +1626,53 @@ export default function App() {
       </div>
 
 
-      {/* =====================================================
-          CONTROL BAR
-      ===================================================== */}
+      {/* CONTROL BAR */}
 
       <div className="relative z-20">
 
         <ControlBar
-
-          isPlaying={
-            isPlaying
-          }
-
-          isComplete={
-            isComplete
-          }
-
+          isPlaying={isPlaying}
+          isComplete={isComplete}
           currentStep={
             currentStepIndex
           }
-
-          totalSteps={
-            totalSteps
-          }
-
-          onPlay={
-            handlePlay
-          }
-
-          onPause={
-            handlePause
-          }
-
-          onReset={
-            handleReset
-          }
-
+          totalSteps={totalSteps}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onReset={handleReset}
           onStepForward={
             handleStepForward
           }
-
           onStepBackward={
             handleStepBackward
           }
+          onScrub={handleScrub}
+          speed={speed}
+          onSpeedChange={setSpeed}
+          activeAlgo={activeAlgo}
 
-          onScrub={
-            handleScrub
-          }
-
-          speed={
-            speed
-          }
-
-          onSpeedChange={
-            setSpeed
-          }
-
-          activeAlgo={
-            activeAlgo
-          }
-
-          arraySize={
-            arraySize
-          }
-
+          arraySize={arraySize}
           onArraySizeChange={
             handleArraySizeChange
           }
-
           onRandomizeArray={
             handleRandomizeArray
           }
-
           onSetPresetArray={
             handleSetPresetArray
           }
-
           onCustomArraySubmit={
             handleCustomArraySubmit
           }
 
-          targetValue={
-            targetValue
-          }
-
+          targetValue={targetValue}
           onTargetValueChange={
             setTargetValue
           }
 
-          searchArray={
-            searchArray
-          }
+          searchArray={searchArray}
 
-          viewMode={
-            viewMode
-          }
-
+          viewMode={viewMode}
           onViewModeChange={
             setViewMode
           }
@@ -1518,15 +1680,11 @@ export default function App() {
           graphPreset={
             graphPresetKey
           }
-
           onGraphPresetChange={
             handleGraphPresetChange
           }
 
-          startNode={
-            startNode
-          }
-
+          startNode={startNode}
           onStartNodeChange={
             handleStartNodeChange
           }
@@ -1542,25 +1700,22 @@ export default function App() {
           onClearGrid={
             handleClearGrid
           }
-
         />
 
       </div>
 
 
       {/* =====================================================
-          MAIN WORKSPACE
+          MAIN
       ===================================================== */}
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 flex flex-col gap-6 relative z-10">
 
 
-        {/* ===================================================
-            INTERACTIVE ARRAY EDITOR
-        =================================================== */}
+        {/* ARRAY EDITOR */}
 
-        {(activeAlgo === 'bubble_sort' ||
-          activeAlgo === 'merge_sort') && (
+        {(activeAlgo === "bubble_sort" ||
+          activeAlgo === "merge_sort") && (
 
           <section className="w-full rounded-2xl border border-slate-800 bg-slate-950/70 p-4 md:p-5 shadow-xl backdrop-blur-md">
 
@@ -1585,11 +1740,7 @@ export default function App() {
                   onClick={
                     handleRandomizeArray
                   }
-
-                  disabled={
-                    isPlaying
-                  }
-
+                  disabled={isPlaying}
                   className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900 text-xs text-slate-300 hover:border-cyan-500 hover:text-cyan-300 disabled:opacity-40"
                 >
                   🎲 Randomize
@@ -1599,25 +1750,16 @@ export default function App() {
                 <button
                   onClick={() => {
 
-                    setIsPlaying(
-                      false
-                    );
+                    setIsPlaying(false);
 
-                    setCurrentStepIndex(
-                      0
-                    );
+                    setCurrentStepIndex(0);
 
                     setChallengeKey(
-                      (prev) =>
-                        prev + 1
+                      prev => prev + 1
                     );
 
                   }}
-
-                  disabled={
-                    isPlaying
-                  }
-
+                  disabled={isPlaying}
                   className="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900 text-xs text-slate-300 hover:border-cyan-500 hover:text-cyan-300 disabled:opacity-40"
                 >
                   ↻ Regenerate
@@ -1637,9 +1779,7 @@ export default function App() {
                 </span>
 
                 <span className="font-mono text-cyan-400">
-                  {
-                    sortingArray.length
-                  }
+                  {sortingArray.length}
                 </span>
 
               </div>
@@ -1652,18 +1792,12 @@ export default function App() {
                 value={
                   sortingArray.length
                 }
-                disabled={
-                  isPlaying
-                }
-
-                onChange={(e) =>
+                disabled={isPlaying}
+                onChange={e =>
                   handleArraySizeChange(
-                    Number(
-                      e.target.value
-                    )
+                    Number(e.target.value)
                   )
                 }
-
                 className="w-full accent-cyan-500"
               />
 
@@ -1689,21 +1823,14 @@ export default function App() {
                       type="number"
                       min="1"
                       max="99"
-                      value={
-                        value
-                      }
-
-                      disabled={
-                        isPlaying
-                      }
-
-                      onChange={(e) =>
+                      value={value}
+                      disabled={isPlaying}
+                      onChange={e =>
                         handleArrayValueChange(
                           index,
                           e.target.value
                         )
                       }
-
                       className="w-12 h-9 rounded-lg border border-slate-700 bg-slate-900 text-center text-xs font-mono text-white outline-none focus:border-cyan-500 disabled:opacity-40"
                     />
 
@@ -1719,9 +1846,9 @@ export default function App() {
         )}
 
 
-        {/* ===================================================
-            LIVE ALGORITHM EXPLANATION
-        =================================================== */}
+        {/* =====================================================
+            LIVE EXPLANATION
+        ===================================================== */}
 
         <section className="w-full rounded-2xl border border-cyan-500/10 bg-slate-950/70 p-4 md:p-5 shadow-xl backdrop-blur-md">
 
@@ -1742,7 +1869,7 @@ export default function App() {
 
             <div className="text-[11px] font-mono text-cyan-400">
 
-              Step{' '}
+              Step{" "}
 
               {Math.min(
                 currentStepIndex + 1,
@@ -1752,7 +1879,7 @@ export default function App() {
                 )
               )}
 
-              {' / '}
+              {" / "}
 
               {totalSteps}
 
@@ -1765,10 +1892,8 @@ export default function App() {
 
             <p className="text-sm font-semibold text-cyan-300">
 
-              {
-                currentStep.description ||
-                'Ready to visualize the algorithm.'
-              }
+              {currentStep.description ||
+                "Ready to visualize the algorithm."}
 
             </p>
 
@@ -1777,15 +1902,13 @@ export default function App() {
 
               <p className="mt-2 text-xs text-slate-400">
 
-                Comparing indices:{' '}
+                Comparing indices:{" "}
 
                 <span className="text-amber-300 font-mono">
 
-                  {
-                    currentStep.comparing.join(
-                      ' and '
-                    )
-                  }
+                  {currentStep.comparing.join(
+                    " and "
+                  )}
 
                 </span>
 
@@ -1798,15 +1921,13 @@ export default function App() {
 
               <p className="mt-2 text-xs text-slate-400">
 
-                Swapping indices:{' '}
+                Swapping indices:{" "}
 
                 <span className="text-rose-300 font-mono">
 
-                  {
-                    currentStep.swapping.join(
-                      ' and '
-                    )
-                  }
+                  {currentStep.swapping.join(
+                    " and "
+                  )}
 
                 </span>
 
@@ -1820,14 +1941,10 @@ export default function App() {
 
                 <p className="mt-2 text-xs text-slate-400">
 
-                  Writing at index:{' '}
+                  Writing at index:{" "}
 
                   <span className="text-purple-300 font-mono">
-
-                    {
-                      currentStep.writing
-                    }
-
+                    {currentStep.writing}
                   </span>
 
                 </p>
@@ -1840,13 +1957,13 @@ export default function App() {
 
                 <p className="mt-2 text-xs text-slate-400">
 
-                  Search range:{' '}
+                  Search range:{" "}
 
                   <span className="text-cyan-300 font-mono">
 
                     [
                     {currentStep.left},
-                    {', '}
+                    {", "}
                     {currentStep.right}
                     ]
 
@@ -1862,14 +1979,10 @@ export default function App() {
 
                 <p className="mt-2 text-xs text-slate-400">
 
-                  Midpoint:{' '}
+                  Midpoint:{" "}
 
                   <span className="text-purple-300 font-mono">
-
-                    {
-                      currentStep.mid
-                    }
-
+                    {currentStep.mid}
                   </span>
 
                 </p>
@@ -1881,14 +1994,10 @@ export default function App() {
 
               <p className="mt-2 text-xs text-slate-400">
 
-                Current node:{' '}
+                Current node:{" "}
 
                 <span className="text-emerald-300 font-mono">
-
-                  {
-                    currentStep.currentNode
-                  }
-
+                  {currentStep.currentNode}
                 </span>
 
               </p>
@@ -1900,16 +2009,12 @@ export default function App() {
 
               <p className="mt-2 text-xs text-slate-400">
 
-                Current cell:{' '}
+                Current cell:{" "}
 
                 <span className="text-emerald-300 font-mono">
-
-                  {
-                    JSON.stringify(
-                      currentStep.currentCell
-                    )
-                  }
-
+                  {JSON.stringify(
+                    currentStep.currentCell
+                  )}
                 </span>
 
               </p>
@@ -1921,96 +2026,77 @@ export default function App() {
         </section>
 
 
-        {/* ===================================================
+        {/* =====================================================
             VISUALIZER
-        =================================================== */}
+        ===================================================== */}
 
         <section
           aria-label="Visualizer Canvas"
           className="w-full"
         >
 
-          {/* Bubble Sort */}
+          {/* BUBBLE SORT */}
 
-          {activeAlgo ===
-            'bubble_sort' && (
+          {activeAlgo === "bubble_sort" && (
 
             <SortingVisualizer
-
               array={
                 currentStep.array ||
                 sortingArray
               }
-
               comparingIndices={
                 currentStep.comparing
               }
-
               swappingIndices={
                 currentStep.swapping
               }
-
               sortedIndices={
                 currentStep.sorted
               }
-
               activeAlgo="bubble_sort"
-
             />
 
           )}
 
 
-          {/* Merge Sort */}
+          {/* MERGE SORT */}
 
-          {activeAlgo ===
-            'merge_sort' && (
+          {activeAlgo === "merge_sort" && (
 
             <SortingVisualizer
-
               array={
                 currentStep.array ||
                 sortingArray
               }
-
               comparingIndices={
                 currentStep.comparing
               }
-
               swappingIndices={
                 currentStep.swapping
               }
-
               writingIndex={
                 currentStep.writing
               }
-
               sortedIndices={
                 currentStep.sorted
               }
-
               activeRange={
                 currentStep.activeRange
               }
-
               midIndex={
                 currentStep.mid
               }
-
               activeAlgo="merge_sort"
-
             />
 
           )}
 
 
-          {/* Binary Search */}
+          {/* BINARY SEARCH */}
 
-          {activeAlgo ===
-            'binary_search' && (
+          {activeAlgo === "binary_search" && (
 
             <BinarySearchVisualizer
-
               array={
                 currentStep.array ||
                 searchArray
@@ -2057,20 +2143,18 @@ export default function App() {
               success={
                 currentStep.success
               }
-
             />
 
           )}
 
 
-          {/* BFS / DFS Graph */}
+          {/* GRAPH BFS / DFS */}
 
-          {(activeAlgo === 'bfs' ||
-            activeAlgo === 'dfs') &&
-            viewMode === 'graph' && (
+          {(activeAlgo === "bfs" ||
+            activeAlgo === "dfs") &&
+            viewMode === "graph" && (
 
             <GraphVisualizer
-
               graphData={
                 GRAPH_PRESETS[
                   graphPresetKey
@@ -2121,35 +2205,28 @@ export default function App() {
               isComplete={
                 currentStep.isComplete
               }
-
             />
 
           )}
 
 
-          {/* BFS / DFS Grid */}
+          {/* GRID BFS / DFS */}
 
-          {(activeAlgo === 'bfs' ||
-            activeAlgo === 'dfs') &&
-            viewMode === 'grid' && (
+          {(activeAlgo === "bfs" ||
+            activeAlgo === "dfs") &&
+            viewMode === "grid" && (
 
             <GridVisualizer
 
-              grid={
-                grid
-              }
+              grid={grid}
 
               onToggleWall={
                 handleToggleWall
               }
 
-              start={
-                gridStart
-              }
+              start={gridStart}
 
-              end={
-                gridEnd
-              }
+              end={gridEnd}
 
               visitedCells={
                 currentStep.visitedCells ||
@@ -2184,90 +2261,59 @@ export default function App() {
         </section>
 
 
-        {/* ===================================================
-            CHALLENGE MODE
-        =================================================== */}
+        {/* =====================================================
+            CHALLENGE
+        ===================================================== */}
 
         <ChallengePanel
-
-          challenge={
-            challenge
-          }
-
-          score={
-            challengeScore
-          }
-
-          streak={
-            challengeStreak
-          }
-
-          onAnswer={
-            handleChallengeAnswer
-          }
-
+          challenge={challenge}
+          score={challengeScore}
+          streak={challengeStreak}
+          onAnswer={handleChallengeAnswer}
           onNextChallenge={
             handleNextChallenge
           }
-
           onReset={
             handleResetChallenge
           }
-
-          disabled={
-            isPlaying
-          }
-
+          disabled={isPlaying}
         />
 
 
-        {/* ===================================================
-            LEARNING PROGRESS
-        =================================================== */}
+        {/* =====================================================
+            PROGRESS
+        ===================================================== */}
 
         <ProgressPanel
-
-          progress={
-            progress
-          }
-
+          progress={progress}
           onReset={
             handleResetProgress
           }
-
         />
 
 
-        {/* ===================================================
+        {/* =====================================================
             ANALYTICS
-        =================================================== */}
+        ===================================================== */}
 
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           <div className="lg:col-span-2 flex flex-col gap-6">
 
-            {/* Pseudocode */}
-
             <PseudocodeViewer
-
               codeLines={
                 ALGORITHMS[
                   activeAlgo
                 ]?.code || []
               }
-
               activeLine={
                 currentStep.line
               }
-
               currentDescription={
                 currentStep.description
               }
-
             />
 
-
-            {/* Complexity */}
 
             <ComplexityCard
               activeAlgo={
@@ -2280,46 +2326,33 @@ export default function App() {
 
           <div className="flex flex-col gap-6">
 
-            {/* Metrics */}
-
             <MetricsPanel
-
               comparisons={
                 metrics.comparisons
               }
-
               swaps={
                 metrics.swaps
               }
-
               visitedCount={
                 metrics.visitedCount
               }
-
               queueOrStackDepth={
                 metrics.queueOrStackDepth
               }
-
               currentStep={
                 currentStepIndex
               }
-
               totalSteps={
                 totalSteps
               }
-
               activeAlgo={
                 activeAlgo
               }
-
               isComplete={
                 isComplete
               }
-
             />
 
-
-            {/* Controls Guide */}
 
             <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl text-xs text-slate-400">
 
@@ -2327,70 +2360,46 @@ export default function App() {
                 Interactive Controls Guide
               </h4>
 
-
               <ul className="space-y-1.5 list-disc list-inside">
 
                 <li>
-
-                  Use{' '}
-
+                  Use{" "}
                   <strong className="text-cyan-300">
                     Play ▶️
-                  </strong>
-
-                  {' '}to watch the algorithm auto-execute.
-
+                  </strong>{" "}
+                  to watch the algorithm auto-execute.
                 </li>
 
-
                 <li>
-
-                  Use{' '}
-
+                  Use{" "}
                   <strong className="text-cyan-300">
                     Pause ⏸️
-                  </strong>
-
-                  {' '}and{' '}
-
+                  </strong>{" "}
+                  and{" "}
                   <strong className="text-cyan-300">
                     Step Forward ⏭️
-                  </strong>
-
-                  {' '}for step-by-step code walkthrough.
-
+                  </strong>{" "}
+                  for step-by-step code walkthrough.
                 </li>
 
-
                 <li>
-
-                  Drag the{' '}
-
+                  Drag the{" "}
                   <strong className="text-indigo-400">
                     Timeline slider
-                  </strong>
-
-                  {' '}to jump straight to any point in time.
-
+                  </strong>{" "}
+                  to jump straight to any point in time.
                 </li>
 
-
                 <li>
-
-                  For BFS/DFS, toggle between{' '}
-
+                  For BFS/DFS, toggle between{" "}
                   <strong className="text-emerald-400">
                     Network Graph
-                  </strong>
-
-                  {' '}and{' '}
-
+                  </strong>{" "}
+                  and{" "}
                   <strong className="text-emerald-400">
                     2D Grid Maze
                   </strong>
-
                   !
-
                 </li>
 
               </ul>
@@ -2422,15 +2431,10 @@ export default function App() {
       ===================================================== */}
 
       <InfoModal
-
-        isOpen={
-          isInfoOpen
-        }
-
+        isOpen={isInfoOpen}
         onClose={() =>
           setIsInfoOpen(false)
         }
-
       />
 
     </div>

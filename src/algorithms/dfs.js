@@ -1,220 +1,452 @@
-// Depth-First Search (DFS) Step Generator for Graph and Grid
-
 export const DFS_CODE = [
-  { line: 1, text: "function DFS(graph, start):" },
-  { line: 2, text: "  stack = new Stack([start])" },
-  { line: 3, text: "  visited = new Set()" },
-  { line: 4, text: "  while stack is not empty:" },
-  { line: 5, text: "    curr = stack.pop()" },
-  { line: 6, text: "    if curr not in visited:" },
-  { line: 7, text: "      visited.add(curr)" },
-  { line: 8, text: "      for neighbor in graph[curr]:" },
-  { line: 9, text: "        if neighbor not in visited:" },
-  { line: 10, text: "          stack.push(neighbor)" },
-  { line: 11, text: "  return visited" },
+  "function DFS(node) {",
+  "    visited.add(node);",
+  "    stack.push(node);",
+  "",
+  "    while (stack.length > 0) {",
+  "        current = stack.pop();",
+  "        visit(current);",
+  "",
+  "        for (neighbor of current.neighbors) {",
+  "            if (!visited.has(neighbor)) {",
+  "                visited.add(neighbor);",
+  "                stack.push(neighbor);",
+  "            }",
+  "        }",
+  "    }",
+  "}",
 ];
 
+/*
+ * DFS for Graph
+ */
 export function generateGraphDFSSteps(graphData, startNodeId) {
   const steps = [];
-  const adj = graphData.adj;
+
+  if (
+    !graphData ||
+    !Array.isArray(graphData.nodes) ||
+    !Array.isArray(graphData.edges) ||
+    graphData.nodes.length === 0
+  ) {
+    return [
+      {
+        visited: [],
+        currentNode: null,
+        stack: [],
+        description: "Graph is empty. Cannot start DFS.",
+        line: 1,
+        isComplete: true,
+        success: false,
+      },
+    ];
+  }
+
+  const adjacency = {};
+
+  graphData.nodes.forEach((node) => {
+    adjacency[node.id] = [];
+  });
+
+  graphData.edges.forEach((edge) => {
+    if (adjacency[edge.source] && adjacency[edge.target]) {
+      adjacency[edge.source].push(edge.target);
+      adjacency[edge.target].push(edge.source);
+    }
+  });
+
+  if (!adjacency[startNodeId]) {
+    return [
+      {
+        visited: [],
+        currentNode: null,
+        stack: [],
+        description: `Start node "${startNodeId}" was not found.`,
+        line: 1,
+        isComplete: true,
+        success: false,
+      },
+    ];
+  }
+
   const stack = [startNodeId];
-  const visited = [];
-  const visitedSet = new Set();
-  const traversedEdges = new Set();
-  const parentMap = {};
+  const visited = new Set();
 
   steps.push({
-    stack: [...stack],
+    visited: [],
     currentNode: null,
-    examiningNeighbor: null,
-    visited: [...visited],
-    traversedEdges: Array.from(traversedEdges),
-    backtracking: false,
-    description: `Initialized DFS. Pushed start node "${startNodeId}" onto Stack.`,
-    line: 2,
+    stack: [...stack],
+    description: `Starting DFS from node ${startNodeId}.`,
+    line: 1,
   });
 
   while (stack.length > 0) {
-    const curr = stack.pop();
+    const current = stack.pop();
 
-    if (!visitedSet.has(curr)) {
-      visitedSet.add(curr);
-      visited.push(curr);
+    if (visited.has(current)) {
+      continue;
+    }
 
-      if (parentMap[curr]) {
-        const edgeKey = [parentMap[curr], curr].sort().join("-");
-        traversedEdges.add(edgeKey);
-      }
+    visited.add(current);
 
-      steps.push({
-        stack: [...stack],
-        currentNode: curr,
-        examiningNeighbor: null,
-        visited: [...visited],
-        traversedEdges: Array.from(traversedEdges),
-        backtracking: false,
-        description: `Popped "${curr}" from top of Stack. Marked "${curr}" as visited.`,
-        line: 7,
-      });
+    steps.push({
+      visited: [...visited],
+      currentNode: current,
+      stack: [...stack],
+      description: `DFS visits node ${current}.`,
+      line: 5,
+    });
 
-      const neighbors = adj[curr] || [];
-      // Push neighbors in reverse order so first neighbor is popped first
-      const unvisitedNeighbors = [];
-      for (let i = neighbors.length - 1; i >= 0; i--) {
-        const neighbor = neighbors[i];
-        if (!visitedSet.has(neighbor)) {
-          parentMap[neighbor] = curr;
-          stack.push(neighbor);
-          unvisitedNeighbors.push(neighbor);
-        }
-      }
+    const neighbors = adjacency[current] || [];
 
-      if (unvisitedNeighbors.length > 0) {
+    for (let i = neighbors.length - 1; i >= 0; i--) {
+      const neighbor = neighbors[i];
+
+      if (!visited.has(neighbor)) {
+        stack.push(neighbor);
+
         steps.push({
-          stack: [...stack],
-          currentNode: curr,
-          examiningNeighbor: unvisitedNeighbors[unvisitedNeighbors.length - 1],
           visited: [...visited],
-          traversedEdges: Array.from(traversedEdges),
-          backtracking: false,
-          description: `Discovered unvisited neighbor(s) [${unvisitedNeighbors.reverse().join(", ")}]. Pushed to Stack.`,
+          currentNode: current,
+          stack: [...stack],
+          description: `Found unvisited neighbor ${neighbor} and pushed it onto the stack.`,
           line: 10,
         });
-      } else {
-        steps.push({
-          stack: [...stack],
-          currentNode: curr,
-          examiningNeighbor: null,
-          visited: [...visited],
-          traversedEdges: Array.from(traversedEdges),
-          backtracking: true,
-          description: `No unvisited neighbors for "${curr}". Backtracking up the call stack...`,
-          line: 5,
-        });
       }
-    } else {
-      steps.push({
-        stack: [...stack],
-        currentNode: curr,
-        examiningNeighbor: null,
-        visited: [...visited],
-        traversedEdges: Array.from(traversedEdges),
-        backtracking: true,
-        description: `Node "${curr}" popped from Stack was already visited. Discarding.`,
-        line: 6,
-      });
     }
   }
 
   steps.push({
-    stack: [],
-    currentNode: null,
-    examiningNeighbor: null,
     visited: [...visited],
-    traversedEdges: Array.from(traversedEdges),
-    backtracking: false,
-    description: `DFS traversal complete! All reachable branches explored. Order: ${visited.join(" → ")}`,
-    line: 11,
+    currentNode: null,
+    stack: [],
+    description: `DFS complete. Visited ${visited.size} node${
+      visited.size === 1 ? "" : "s"
+    }.`,
+    line: 15,
     isComplete: true,
+    success: true,
   });
 
   return steps;
 }
 
-// 2D Grid DFS for pathfinding
+/*
+ * DFS for 2D Grid Pathfinding
+ */
 export function generateGridDFSSteps(grid, start, end) {
-  const rows = grid.length;
-  const cols = grid[0].length;
   const steps = [];
-  const stack = [{ r: start.r, c: start.c }];
-  const visited = new Set([`${start.r},${start.c}`]);
+
+  /*
+   * Validate grid
+   */
+  if (!Array.isArray(grid) || grid.length === 0) {
+    return [
+      {
+        visitedCells: [],
+        currentCell: null,
+        stackSize: 0,
+        path: [],
+        description: "Grid is empty. Cannot start DFS.",
+        line: 11,
+        isComplete: true,
+        success: false,
+      },
+    ];
+  }
+
+  const rows = grid.length;
+
+  const cols =
+    Array.isArray(grid[0]) && grid[0].length > 0
+      ? grid[0].length
+      : 0;
+
+  if (cols === 0) {
+    return [
+      {
+        visitedCells: [],
+        currentCell: null,
+        stackSize: 0,
+        path: [],
+        description: "Grid has no columns. Cannot start DFS.",
+        line: 11,
+        isComplete: true,
+        success: false,
+      },
+    ];
+  }
+
+  /*
+   * Check whether a cell is valid
+   */
+  const isValidCell = (r, c) => {
+    return (
+      r >= 0 &&
+      r < rows &&
+      c >= 0 &&
+      c < cols &&
+      Array.isArray(grid[r]) &&
+      grid[r][c] &&
+      !grid[r][c].isWall
+    );
+  };
+
+  /*
+   * Validate start and end
+   */
+  if (
+    !start ||
+    !end ||
+    !isValidCell(start.r, start.c) ||
+    !isValidCell(end.r, end.c)
+  ) {
+    return [
+      {
+        visitedCells: [],
+        currentCell: null,
+        stackSize: 0,
+        path: [],
+        description:
+          "Start or target cell is invalid or blocked.",
+        line: 11,
+        isComplete: true,
+        success: false,
+      },
+    ];
+  }
+
+  /*
+   * DFS uses a Stack
+   */
+  const stack = [
+    {
+      r: start.r,
+      c: start.c,
+    },
+  ];
+
+  /*
+   * Store visited cells
+   */
+  const visited = new Set([
+    `${start.r},${start.c}`,
+  ]);
+
+  /*
+   * Store parent of every visited cell.
+   * This is used later to reconstruct the path.
+   */
   const parent = {};
+
   const visitedCells = [];
 
+  /*
+   * Initial step
+   */
   steps.push({
     visitedCells: [],
-    currentCell: start,
+    currentCell: {
+      r: start.r,
+      c: start.c,
+    },
     stackSize: 1,
     path: [],
-    description: `Starting DFS on grid from (${start.r}, ${start.c}) to (${end.r}, ${end.c})`,
+    description: `Starting DFS from (${start.r}, ${start.c}). Start cell pushed onto Stack.`,
     line: 2,
   });
 
+  /*
+   * Directions:
+   *
+   * Up
+   * Right
+   * Down
+   * Left
+   */
   const dirs = [
-    [-1, 0], // Up
-    [0, 1],  // Right
-    [1, 0],  // Down
-    [0, -1], // Left
+    [-1, 0],
+    [0, 1],
+    [1, 0],
+    [0, -1],
   ];
 
   let found = false;
 
+  /*
+   * DFS main loop
+   */
   while (stack.length > 0) {
+    /*
+     * Remove the top element from stack
+     */
     const curr = stack.pop();
-    visitedCells.push(curr);
 
-    if (curr.r === end.r && curr.c === end.c) {
+    /*
+     * Mark current cell as visited
+     */
+    visitedCells.push({
+      r: curr.r,
+      c: curr.c,
+    });
+
+    steps.push({
+      visitedCells: [...visitedCells],
+      currentCell: {
+        r: curr.r,
+        c: curr.c,
+      },
+      stackSize: stack.length,
+      path: [],
+      description: `DFS visits cell (${curr.r}, ${curr.c}). Exploring its neighbors.`,
+      line: 5,
+    });
+
+    /*
+     * Check whether target is reached
+     */
+    if (
+      curr.r === end.r &&
+      curr.c === end.c
+    ) {
       found = true;
       break;
     }
 
-    for (const [dr, dc] of dirs) {
+    /*
+     * Add neighbors to stack
+     *
+     * Reverse order is used because Stack follows
+     * Last-In-First-Out (LIFO).
+     */
+    for (let i = dirs.length - 1; i >= 0; i--) {
+      const [dr, dc] = dirs[i];
+
       const nr = curr.r + dr;
       const nc = curr.c + dc;
+
       const key = `${nr},${nc}`;
 
+      /*
+       * Check:
+       * 1. Cell is inside grid
+       * 2. Cell is not a wall
+       * 3. Cell is not already visited
+       */
       if (
-        nr >= 0 && nr < rows &&
-        nc >= 0 && nc < cols &&
-        !grid[nr][nc].isWall &&
+        isValidCell(nr, nc) &&
         !visited.has(key)
       ) {
+        /*
+         * Mark as visited when pushing
+         * to avoid adding the same cell multiple times.
+         */
         visited.add(key);
-        parent[key] = curr;
-        stack.push({ r: nr, c: nc });
-      }
-    }
 
-    if (visitedCells.length % 2 === 0 || stack.length === 0) {
-      steps.push({
-        visitedCells: [...visitedCells],
-        currentCell: curr,
-        stackSize: stack.length,
-        path: [],
-        description: `DFS diving deep into branch. Visited ${visitedCells.length} cells. Stack depth: ${stack.length}`,
-        line: 5,
-      });
+        /*
+         * Store parent
+         */
+        parent[key] = {
+          r: curr.r,
+          c: curr.c,
+        };
+
+        /*
+         * Push neighbor into stack
+         */
+        stack.push({
+          r: nr,
+          c: nc,
+        });
+
+        /*
+         * Add visualization step
+         */
+        steps.push({
+          visitedCells: [...visitedCells],
+          currentCell: {
+            r: curr.r,
+            c: curr.c,
+          },
+          stackSize: stack.length,
+          path: [],
+          description: `Found unvisited neighbor (${nr}, ${nc}) and pushed it onto the Stack.`,
+          line: 10,
+        });
+      }
     }
   }
 
-  // Path reconstruction
+  /*
+   * Reconstruct path if target was found
+   */
   const path = [];
-  if (found) {
-    let currKey = `${end.r},${end.c}`;
-    while (currKey && parent[currKey]) {
-      const p = parent[currKey];
-      path.unshift(p);
-      currKey = `${p.r},${p.c}`;
-    }
-    path.push(end);
 
+  if (found) {
+    let current = {
+      r: end.r,
+      c: end.c,
+    };
+
+    path.unshift({
+      r: current.r,
+      c: current.c,
+    });
+
+    /*
+     * Move backwards using parent references
+     * until we reach the start cell.
+     */
+    while (
+      current.r !== start.r ||
+      current.c !== start.c
+    ) {
+      const key = `${current.r},${current.c}`;
+
+      const previous = parent[key];
+
+      /*
+       * Safety check
+       */
+      if (!previous) {
+        break;
+      }
+
+      current = previous;
+
+      path.unshift({
+        r: current.r,
+        c: current.c,
+      });
+    }
+
+    /*
+     * Final successful step
+     */
     steps.push({
       visitedCells: [...visitedCells],
-      currentCell: end,
+      currentCell: {
+        r: end.r,
+        c: end.c,
+      },
       stackSize: stack.length,
       path: [...path],
-      description: `Target reached via DFS exploration! Path length: ${path.length} steps.`,
+      description: `Target reached! DFS found a path of ${path.length} cells.`,
       line: 11,
       isComplete: true,
       success: true,
     });
   } else {
+    /*
+     * Target was not found
+     */
     steps.push({
       visitedCells: [...visitedCells],
       currentCell: null,
       stackSize: 0,
       path: [],
-      description: `Target could not be reached. All accessible branches explored.`,
+      description:
+        "Target could not be reached. All accessible branches were explored.",
       line: 11,
       isComplete: true,
       success: false,
